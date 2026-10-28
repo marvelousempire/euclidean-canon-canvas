@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Euclidean Canon Canvas</title>
+<style>
+body { margin:0; background:#0a0a12; color:#eee; font-family:system-ui; display:flex; flex-direction:column; align-items:center; }
+canvas { border:1px solid #333; background:#111; }
+.controls { margin:12px; display:flex; gap:16px; align-items:center; }
+input { width:60px; }
+</style>
+</head>
+<body>
+<div class="controls">
+  <label>Pulses <input type="number" id="pulses" value="3" min="1" max="16"></label>
+  <label>Steps <input type="number" id="steps" value="8" min="2" max="32"></label>
+  <label>Rotation <input type="number" id="rot" value="0" min="0" max="16"></label>
+  <label>Canon offset <input type="number" id="offset" value="3" min="0" max="16"></label>
+</div>
+<canvas id="c" width="640" height="480"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const nodes = [
+  {id:'NW', a: -Math.PI*0.75}, {id:'N', a: -Math.PI/2}, {id:'NE', a: -Math.PI*0.25},
+  {id:'W', a: Math.PI}, {id:'C', a: 0, r:0}, {id:'E', a: 0},
+  {id:'SW', a: Math.PI*0.75}, {id:'S', a: Math.PI/2}, {id:'SE', a: Math.PI*0.25}
+];
+
+function bjorklund(k, n) {
+  if (k > n) return [];
+  const pattern = Array(n).fill(0);
+  let bucket = 0;
+  for (let i = 0; i < n; i++) {
+    bucket += k;
+    if (bucket >= n) { bucket -= n; pattern[i] = 1; }
+  }
+  return pattern;
+}
+
+function draw() {
+  const k = +document.getElementById('pulses').value;
+  const n = +document.getElementById('steps').value;
+  const rot = +document.getElementById('rot').value;
+  const off = +document.getElementById('offset').value;
+  const p1 = bjorklund(k, n);
+  const p2 = [...p1.slice(off), ...p1.slice(0, off)];
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx = 320, cy = 240, R = 160;
+
+  ctx.strokeStyle = '#333';
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+
+  nodes.forEach((node, i) => {
+    const step = i % n;
+    const x = cx + Math.cos(node.a) * (node.r===0 ? 0 : R);
+    const y = cy + Math.sin(node.a) * (node.r===0 ? 0 : R);
+    const on1 = p1[(step + rot) % n];
+    const on2 = p2[(step + rot) % n];
+    ctx.beginPath();
+    ctx.arc(x, y, node.r===0 ? 18 : 22, 0, Math.PI*2);
+    if (on1 && on2) ctx.fillStyle = '#ff44aa';
+    else if (on1) ctx.fillStyle = '#44aaff';
+    else if (on2) ctx.fillStyle = '#ffaa44';
+    else ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(node.id, x, y+4);
+  });
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px system-ui';
+  ctx.fillText(`Talea: ${p1.map(x=>x?'●':'○').join(' ')}`, 20, 30);
+  ctx.fillText(`Canon: ${p2.map(x=>x?'●':'○').join(' ')}`, 20, 50);
+}
+
+['pulses','steps','rot','offset'].forEach(id => 
+  document.getElementById(id).addEventListener('input', draw)
+);
+draw();
+</script>
+</body>
+</html>
